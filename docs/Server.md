@@ -55,11 +55,11 @@ Runs a RapidMiner process.
 Arguments:
 - `path`: path to the *.rmp RapidMiner process file.
 - `inputs`: inputs used by the RapidMiner process, as a list of pandas DataFrame objects or a single pandas DataFrame.
-- `ignore_cleanup_errors`: boolean. Determines if any error during temporary data cleanup should lead to an error. Default value is True.
 
 Possible `kwargs` arguments:
 - `queue`: the name of the queue to submit the process to. Default is DEFAULT
 - `macros`: optional dict that sets the macros in the process context according to the key-value pairs
+- `ignore_cleanup_errors`: boolean. Determines if any error during temporary data cleanup should lead to an error. Default value is True.
 
 Returns:
 - the results of the RapidMiner process, as a list of pandas DataFrame objects.
