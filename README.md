@@ -16,7 +16,7 @@ This Python package allows you to interact with RapidMiner Studio and Server. Yo
 
 * RapidMiner Studio 9.3.0-BETA for Studio class
 * RapidMiner Server 9.3.0-BETA for Server class
-* Python Scripting extension 9.3.0-BETA installed in both cases
+* Python Scripting extension 9.3.0-BETA installed for both Studio and Server, download it from [9.3 Beta page](https://s3.amazonaws.com/static.rapidminer.com/rnd/html/rapidminer-9.3-preview.html)
 
 ## Known current limitations
 

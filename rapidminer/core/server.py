@@ -178,12 +178,7 @@ class Server(Connector):
             r = requests.post(post_url, json={"command": "save", "path": output[i], "data": data}, headers=self.auth_header)
             if r.status_code != 200:
                 raise ServerException("Failed to save input no. " + str(i) + ", status: " + str(r.status_code))
-            if len(r.content) > 0:
-                try:
-                    check_for_error(r)
-                except:
-                    # ignore, as there is not necessarily an output
-                    return
+            check_for_error(r)
 
     def run_process(self, path, inputs=None, **kwargs):
         """
