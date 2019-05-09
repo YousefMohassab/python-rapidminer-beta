@@ -21,8 +21,6 @@ import tempfile
 import jwt
 import json
 import xml.etree.ElementTree as et
-import pkg_resources
-pkg_resources.require("pandas>=0.23.0")
 import pandas as pd
 import pickle
 import os
@@ -86,7 +84,7 @@ class Server(Connector):
         Possible kwargs arguments:
         :param password: password for the username. If not provided, you will need to enter it.
         :param webservice: this API requires an auxiliary process installed as a webservice on the Server instance. This parameter specifies the name for this webservice. The webservice is automatically installed if it has not been.
-        :param processpath: path in the repository where the process behind the webservice will be saved. If not specified, a user prompt asks for the path, but proposes a default value.
+        :param processpath: path in the repository where the process behind the webservice will be saved. If not specified, a user prompt asks for the path, but proposes a default value. Note that you may want to make this process executable for all users.
         :param tempfolder: repository folder on Server that can be used for storing temporary objects by run_process method. Default value is "tmp" inside the user home folder. Note that in case of certain failures, you may need to delete remaining temporary objects from this folder manually.
         :param install: boolean. If set to false, webservice installation step is completely skipped.
         """
@@ -172,10 +170,22 @@ class Server(Connector):
             
         if len(dataframe) != len(output):
             raise ValueError("dataframe and output must contain the same number of values")
-        for i in range(len(dataframe)):
+        for df, out in zip(dataframe, output):
             post_url = self.server_url + "/api/rest/process/" + self.webservice + "?"
-            data = json.loads(dataframe[i].to_json(orient="table", index=False))
-            r = requests.post(post_url, json={"command": "save", "path": output[i], "data": data}, headers=self.auth_header)
+            if type(df) == pd.DataFrame:
+                try:
+                    data = json.loads(df.to_json(orient="table", index=False))
+                    dtype = "data"
+                except TypeError:
+                    # index=False is only supported in Pandas>=0.23.0
+                    if "index" in df.columns:
+                        raise ServerException("There is a column named \"index\". Please rename it, or install Pandas >= 0.23.0.")
+                    else:
+                        data = json.loads(df.to_json(orient="table"))
+                        dtype = "data_with_index"
+            else:
+                raise ValueError("dataframe parameter must be one or more Pandas DataFrames")
+            r = requests.post(post_url, json={"command": "save", "path": out, "data": data, "type": dtype}, headers=self.auth_header)
             if r.status_code != 200:
                 raise ServerException("Failed to save input no. " + str(i) + ", status: " + str(r.status_code))
             check_for_error(r)
@@ -299,17 +309,19 @@ class Server(Connector):
         if r.status_code == 404:
             print("Webservice is not installed, installing it with the name '" + self.webservice + "'...")
             default_webservice_path = "/home/" + self.username + "/" + self.webservice
-            webservice_path = input("Please enter repository path for installing the webservice [" + default_webservice_path + "]: ") if self.__processpath == None else self.__processpath
-            if webservice_path.strip() == "":
-                webservice_path = default_webservice_path
-            self.__install_webservice(webservice_path)
+            self.__processpath = input("Please enter repository path for installing the webservice - note that you may want to make this process executable by all users [" + default_webservice_path + "]: ") if self.__processpath == None else self.__processpath
+            if self.__processpath.strip() == "":
+                self.__processpath = default_webservice_path
+            self.__install_webservice(self.__processpath)
             # Re-test installed service
             r = requests.post(post_url, json={"command": "test"}, headers=self.auth_header)
             if r.status_code != 200:
                 raise ServerException("Test of installed webservice failed, status: " + r.status_code)
+            check_for_error(r)
             print("Webservice installed successfully")
         elif r.status_code == 200:
-            check_for_error(r)   
+            check_for_error(r)
+            print("Webservice backend exists")
         else:
             raise ServerException("Webservice test failed with unexpected error, status: " + r.status_code \
                                   + ". Make sure that the webservice with the name '" + self.webservice + ' is installed.')
@@ -359,10 +371,11 @@ class Server(Connector):
                 raise ServerException("Failed to delete path \"" + path + "\", status: " + str(r.status_code))
     
     def __install_webservice(self, path):
-        self.__postProcess(path, self.__WEBSERVICE_PROCESS_XML)
-        self.__postService(self.webservice, self.__WEBSERVICE_DESCRIPTOR_XML.replace("PROCESS_ENTRY_PATH", path))
-
-    def __postProcess(self, path, process):
+        self.__post_process(path, self.__WEBSERVICE_PROCESS_XML)
+        self.__post_service(self.webservice, self.__WEBSERVICE_DESCRIPTOR_XML.replace("PROCESS_ENTRY_PATH", path))
+#        self.__make_public()
+        
+    def __post_process(self, path, process):
         post_url = self.server_url + "/api/rest/resources" + path
         head = self.auth_header.copy()
         head['Content-Type'] = 'application/vnd.rapidminer.rmp+xml'
@@ -371,9 +384,16 @@ class Server(Connector):
             raise ServerException("Failed to save process to repository path '" + path + "', status: " + str(r.status_code))
         return r
 
-    def __postService(self, serviceName, descriptor):
+    def __post_service(self, serviceName, descriptor):
         post_url = self.server_url + "/api/rest/service/" + serviceName
         r = requests.post(post_url, auth=(self.username, self.__password), data=descriptor)
         if r.status_code != 200:
             raise ServerException("Failed to install webservice with the name '" + serviceName + "', status: " + str(r.status_code))
         return r
+
+#    def __make_public(self):
+#        post_url = self.server_url + "/api/rest/process/" + self.webservice + "?"
+#        r = requests.post(post_url, json={"command": "makePublic", "path": self.__processpath}, headers=self.auth_header)
+#        if r.status_code != 200:
+#            raise ServerException("Failed to make process '" + self.__processpath + "' public, status: " + str(r.status_code))
+#        check_for_error(r)

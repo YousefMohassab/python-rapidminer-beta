@@ -1,4 +1,4 @@
-# RapidMiner Python package - BETA version
+# RapidMiner Python package - BETA2 version
 
 This Python package allows you to interact with RapidMiner Studio and Server. You can collaborate using the RapidMiner repository and leverage the scalable Server infrastructure to run processes. This document shows examples on how to use the package. Additional notebook files provide more advanced examples. There is an API document for each classes: [Studio](docs/Studio.md), [Server](docs/Server.md), [Scoring](docs/Scoring.md).
 
@@ -14,9 +14,9 @@ This Python package allows you to interact with RapidMiner Studio and Server. Yo
 
 ## Requirements
 
-* RapidMiner Studio 9.3.0-BETA for Studio class
-* RapidMiner Server 9.3.0-BETA for Server class
-* Python Scripting extension 9.3.0-BETA installed for both Studio and Server, download it from [9.3 Beta page](https://s3.amazonaws.com/static.rapidminer.com/rnd/html/rapidminer-9.3-preview.html)
+* RapidMiner Studio *9.3.0-BETA2* for Studio class
+* RapidMiner Server *9.3.0-BETA* for Server class
+* Python Scripting extension *9.3.0-BETA2* installed for both Studio and Server, download it from [9.3 Beta page](https://s3.amazonaws.com/static.rapidminer.com/rnd/html/rapidminer-9.3-preview.html)
 
 ## Known current limitations
 
@@ -27,7 +27,6 @@ This BETA version is not intended to be used in a production environment.
   * Python 2 is currently not supported, but it may be supported in the GA release or in the near future
   * Please report if you run into problems using version Python 3.x
 * Server read and write methods can only handle data currently, Studio read and write methods can handle other objects as well
-* Studio class: Encoding may cause failure when there are non-ascii characters in the path or in macros. Please report other encoding issues that you run into
 * Studio class: If logging is disabled, e.g. `os.devnull` is used, and there is an error, you will see a different error than the real one - this will be fixed
 * Studio class: Accessing a remote repository is possible if password is saved locally. If not, `password` field could be used, but it does not work yet 
 

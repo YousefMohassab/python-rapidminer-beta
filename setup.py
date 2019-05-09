@@ -16,7 +16,7 @@
 # 
 from setuptools import setup, find_packages
 
-requirements = ["pandas>=0.23.0", "requests", "numpy", "PyJWT"]
+requirements = ["pandas", "requests", "numpy", "PyJWT"]
 
 setup(name='rapidminer',
       version='0.1',

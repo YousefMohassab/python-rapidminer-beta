@@ -251,9 +251,32 @@ class Studio(Connector):
         else:
             return '\"' + prefix + param + '\"'
 
-    def __get_script_extension(self):
+    def __encode_params(self, param):
+        encoded = ""
+        for character in param:
+            if ord(character) < 128:
+                if character == "\\":
+                    # replace \ with \\
+                    encoded = encoded + "\\\\"
+                elif character == "\"":
+                    # replace " with \a
+                    encoded = encoded + "\\a"
+                else:
+                    encoded = encoded + character
+            else:
+                #replace non ASCII with \nxHHHH, where n is the length og HHHH, HHHH is the hex code
+                code = hex(ord(character))[2:]
+                encoded = encoded + "\\" + str(len(code)) + "x" + code
+        return encoded
+
+    def __append_param(self, params, param, prefix):
+        params.append(self.__quote_params(self.__encode_params(param), prefix=prefix))
+
+    def __get_script_suffix(self):
         if platform.system() == "Windows":
             return ".bat"
+        elif platform.system() == "Darwin":
+            return "-osx.sh"
         else:
             return ".sh"
 
@@ -274,36 +297,36 @@ class Studio(Connector):
                   "stderr": subprocess.STDOUT,
                   "bufsize": 10}
         params = []
-        params.append(self.studio_home + "scripts" + os.path.sep + "rapidminer-batch" + self.__get_script_extension())
-        params.append(self.__quote_params("rmx_python_scripting:com.rapidminer.extension.pythonscripting.launcher.ExtendedCmdLauncher", prefix="-C"))
+        params.append(self.studio_home + "scripts" + os.path.sep + "rapidminer-batch" + self.__get_script_suffix())
+        self.__append_param(params, "rmx_python_scripting:com.rapidminer.extension.pythonscripting.launcher.ExtendedCmdLauncher", prefix="-C")
         if (process is not None):
             if not isinstance(process, Resource):
                 process = RepositoryLocation(name=process)
-            params.append(self.__quote_params(process.to_string(), prefix="-P"))
+            self.__append_param(params, process.to_string(), prefix="-P")
         for input_file in input_files:
             if not isinstance(input_file, Resource):
                 input_file = RepositoryLocation(name=input_file)
-            params.append(self.__quote_params(input_file.to_string(), prefix="-I"))
+            self.__append_param(params, input_file.to_string(), prefix="-I")
         for output_file in output_files:
             if not isinstance(output_file, Resource):
                 output_file = RepositoryLocation(name=output_file)
-            params.append(self.__quote_params(output_file.to_string(), prefix="-O"))
+            self.__append_param(params, output_file.to_string(), prefix="-O")
         if output_dir is not None:
-            params.append(self.__quote_params(output_dir, prefix="-D"))
+            self.__append_param(params, output_dir, prefix="-D")
         if operator is not None:
-            params.append(self.__quote_params(operator, prefix="-N"))
+            self.__append_param(params, operator, prefix="-N")
         if self.__password is not None:
-            params.append(self.__quote_params(self.__password, prefix="-X"))
+            self.__append_param(params, self.__password, prefix="-X")
         if len(macros) > 0:
             for key in macros:
-                params.append(self.__quote_params(str(key) + "=" + str(macros[key]), prefix="-M"))
+                self.__append_param(params, str(key) + "=" + str(macros[key]), prefix="-M")
         if any(self.__needs_temp_dir(input) for input in input_files):
             temp_dir = tempfile.mkdtemp(prefix=self.__TMP_OUTPUT_DIR_PREFIX)
-            params.append(self.__quote_params(temp_dir, prefix="-T"))
+            self.__append_param(params, temp_dir, prefix="-T")
         else:
             temp_dir = None
         if self.override_python_binary:
-            params.append(self.__quote_params(sys.executable, prefix="-B"))
+            self.__append_param(params, sys.executable, prefix="-B")
         threadid = threading.currentThread().ident
         if threadid in self.__last_exit_code__:
             del self.__last_exit_code__[threadid]
